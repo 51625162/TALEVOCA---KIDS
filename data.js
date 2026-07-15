@@ -620,6 +620,8 @@ const BADGES = [
   { id:"dialogue_master", name:"Diyalog Ustası", desc:"Tüm diyalog hikâyelerini tamamladın!", cond:(s)=>DIALOGUE_STORIES.every(ds=>s.storiesDone.includes(ds.id)) },
   { id:"first_chess", name:"Satranç Çırağı", desc:"İlk satranç bulmacanı çözdün!", cond:(s)=>s.chessDone.length>=1 },
   { id:"chess_master", name:"Satranç Ustası", desc:"Tüm satranç bulmacalarını çözdün!", cond:(s)=>s.chessDone.length>=CHESS_PUZZLES.length },
+  { id:"beat_lumi", name:"Lumi'yi Yendin!", desc:"Lumi'ye karşı ilk maçını kazandın!", cond:(s)=>(s.lumiWins||0)>=1 },
+  { id:"beat_lumi_5", name:"Satranç Şampiyonu", desc:"Lumi'ye karşı 5 maç kazandın!", cond:(s)=>(s.lumiWins||0)>=5 },
   { id:"hundred_diamonds", name:"Elmas Avcısı", desc:"100 elmasa ulaştın!", cond:(s)=>s.diamonds>=100 },
   { id:"level5", name:"Yükselen Yıldız", desc:"Seviye 5'e ulaştın!", cond:(s)=>levelFromXP(s.xp)>=5 },
   { id:"level10", name:"Parlayan Yıldız", desc:"Seviye 10'a ulaştın!", cond:(s)=>levelFromXP(s.xp)>=10 },

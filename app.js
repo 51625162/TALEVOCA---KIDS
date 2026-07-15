@@ -15,6 +15,15 @@ const SENTENCES = [
   { tr: "Kedi masanın üzerinde.", words: ["The","cat","is","on","the","table"] },
   { tr: "O elma yiyor.", words: ["She","eats","an","apple"] },
   { tr: "Güneş parlıyor.", words: ["The","sun","is","shining"] },
+  { tr: "Ben bir kitap okuyorum.", words: ["I","am","reading","a","book"] },
+  { tr: "Onun adı Mia.", words: ["Her","name","is","Mia"] },
+  { tr: "Biz futbol oynuyoruz.", words: ["We","play","football"] },
+  { tr: "Köpek çok hızlı koşuyor.", words: ["The","dog","runs","very","fast"] },
+  { tr: "Annem bir doktor.", words: ["My","mother","is","a","doctor"] },
+  { tr: "Bu benim en sevdiğim renk.", words: ["This","is","my","favorite","color"] },
+  { tr: "Onlar parkta oynuyorlar.", words: ["They","are","playing","in","the","park"] },
+  { tr: "Ben her sabah süt içerim.", words: ["I","drink","milk","every","morning"] },
+  { tr: "Kuş gökyüzünde uçuyor.", words: ["The","bird","flies","in","the","sky"] },
 ];
 
 let CUR = { user:null, state:null };
@@ -91,12 +100,19 @@ function playChestSound(){
 // sayısı değişebilir — bazı cihazlarda tek ses, bazılarında çok sayıda olur.
 let AVAILABLE_VOICES = [];
 let VOICES_READY = false;
+// Bazı cihazlarda garip/bozuk "novelty" sesler bulunur (ör. Zarvox, Bahh,
+// Trinoids, Bad News...). Bunlar çocuklar için uygun olmadığından listeden
+// çıkarılır; en fazla 5 düzgün İngilizce ses gösterilir.
+const BROKEN_VOICE_NAMES = ["zarvox","bahh","bad news","bells","boing","bubbles","cellos","wobble","trinoids","albert","deranged","hysterical","pipe organ","junior","kathy","ralph","fred","whisper","good news"];
 function loadVoices(){
   try{
     const all = speechSynthesis.getVoices();
     if(all && all.length){
-      AVAILABLE_VOICES = all.filter(v=> v.lang && v.lang.toLowerCase().startsWith("en"));
-      if(!AVAILABLE_VOICES.length) AVAILABLE_VOICES = all;
+      let en = all.filter(v=> v.lang && v.lang.toLowerCase().startsWith("en"));
+      if(!en.length) en = all;
+      en = en.filter(v=> !BROKEN_VOICE_NAMES.some(bad=> v.name.toLowerCase().includes(bad)));
+      if(!en.length) en = all.filter(v=> v.lang && v.lang.toLowerCase().startsWith("en"));
+      AVAILABLE_VOICES = en.slice(0, 5);
       VOICES_READY = true;
     }
   }catch(e){ /* speechSynthesis yok */ }
@@ -148,14 +164,17 @@ function openVoiceSettings(){
   loadVoices();
   const el = document.getElementById("voice-settings-content");
   if(!AVAILABLE_VOICES.length){
-    el.innerHTML = `<h3>🔊 Ses Ayarları</h3><p style="color:var(--text-soft)">Cihazında birden fazla İngilizce ses bulunamadı. Yine de karakterler arasında perde farkıyla ayrım yapılır.</p>`;
+    el.innerHTML = `<h3>🔊 Ses Ayarları</h3><p style="color:var(--text-soft)">Cihazında birden fazla İngilizce ses bulunamadı. Yine de karakterler arasında perde farkıyla ayrım yapılır.</p>
+      <button class="big-btn" id="voice-close-btn">Kapat</button>`;
+    document.getElementById("voice-close-btn").addEventListener("click", ()=> closeModal("modal-voice-settings"));
     openModal("modal-voice-settings");
     return;
   }
   const currentPref = (CUR.state && CUR.state.voicePref) || (AVAILABLE_VOICES[0] && AVAILABLE_VOICES[0].name);
   el.innerHTML = `<h3>🔊 Ses Ayarları</h3>
-    <p style="color:var(--text-soft);font-size:13px">Derslerde ve hikâyelerde kullanılacak sesi seç. Cihazına yüklü seslere göre liste değişebilir.</p>
-    <div id="voice-list"></div>`;
+    <p style="color:var(--text-soft);font-size:13px">Derslerde ve hikâyelerde kullanılacak sesi seç (en fazla 5 seçenek gösterilir).</p>
+    <div id="voice-list"></div>
+    <button class="big-btn" id="voice-close-btn" style="margin-top:12px">Kapat</button>`;
   const list = document.getElementById("voice-list");
   AVAILABLE_VOICES.forEach((v, idx)=>{
     const row = document.createElement("div");
@@ -179,6 +198,7 @@ function openVoiceSettings(){
     row.appendChild(btnSelect);
     list.appendChild(row);
   });
+  document.getElementById("voice-close-btn").addEventListener("click", ()=> closeModal("modal-voice-settings"));
   openModal("modal-voice-settings");
 }
 
@@ -195,6 +215,7 @@ function defaultState(){
     openedChests:[],
     chestInventory:[],
     voicePref:null,
+    lumiWins:0,
     badgesUnlocked:[]
   };
 }
@@ -244,6 +265,7 @@ function init(){
     b.addEventListener("click", ()=> openGame(b.dataset.game));
   });
   document.getElementById("btn-chess-howto").addEventListener("click", openChessHowTo);
+  document.getElementById("btn-chess-vs-lumi").addEventListener("click", openChessMatchPicker);
   document.getElementById("btn-voice-settings").addEventListener("click", openVoiceSettings);
 
   // Not: Güvenlik/gizlilik için oturum otomatik açılmaz — her girişte şifre istenir.
@@ -780,6 +802,342 @@ function openChessHowTo(){
   openModal("modal-chess-howto");
 }
 
+/* ===================================================================
+   SATRANÇ MOTORU — Lumi'ye Karşı Oyna
+   Gerçek satranç kurallarıyla (rok ve geçerken alma hariç, terfi
+   otomatik vezire) oynanabilen basit bir motor + 3 zorluk seviyesinde
+   yapay zekâ rakibi (Lumi).
+=================================================================== */
+const PIECE_VALUES = { P:1, N:3, B:3, R:5, Q:9, K:0 };
+const KNIGHT_OFFS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KING_OFFS   = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const BISHOP_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const ROOK_DIRS   = [[-1,0],[1,0],[0,-1],[0,1]];
+
+function initialChessBoard(){
+  return [
+    ["r","n","b","q","k","b","n","r"],
+    ["p","p","p","p","p","p","p","p"],
+    [".",".",".",".",".",".",".","."],
+    [".",".",".",".",".",".",".","."],
+    [".",".",".",".",".",".",".","."],
+    [".",".",".",".",".",".",".","."],
+    ["P","P","P","P","P","P","P","P"],
+    ["R","N","B","Q","K","B","N","R"],
+  ];
+}
+function pieceColor(p){ if(p===".") return null; return p===p.toUpperCase() ? "w":"b"; }
+function pieceType(p){ return p.toUpperCase(); }
+function inBoard(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+
+function generatePseudoMoves(board, color){
+  const moves = [];
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const p = board[r][c];
+      if(p==="." || pieceColor(p)!==color) continue;
+      const type = pieceType(p);
+      if(type==="P"){
+        const dir = color==="w" ? -1 : 1;
+        const startRow = color==="w" ? 6 : 1;
+        const oneR = r+dir;
+        if(inBoard(oneR,c) && board[oneR][c]==="."){
+          moves.push(makePawnMove(r,c,oneR,c,color,false));
+          const twoR = r+2*dir;
+          if(r===startRow && board[twoR][c]==="."){
+            moves.push({from:[r,c],to:[twoR,c],capture:false,promotion:false});
+          }
+        }
+        for(const dc of [-1,1]){
+          const nr=r+dir, nc=c+dc;
+          if(inBoard(nr,nc) && board[nr][nc]!=="." && pieceColor(board[nr][nc])!==color){
+            moves.push(makePawnMove(r,c,nr,nc,color,true));
+          }
+        }
+      } else if(type==="N"){
+        for(const [dr,dc] of KNIGHT_OFFS){
+          const nr=r+dr, nc=c+dc;
+          if(inBoard(nr,nc) && pieceColor(board[nr][nc])!==color)
+            moves.push({from:[r,c],to:[nr,nc],capture:board[nr][nc]!==".",promotion:false});
+        }
+      } else if(type==="K"){
+        for(const [dr,dc] of KING_OFFS){
+          const nr=r+dr, nc=c+dc;
+          if(inBoard(nr,nc) && pieceColor(board[nr][nc])!==color)
+            moves.push({from:[r,c],to:[nr,nc],capture:board[nr][nc]!==".",promotion:false});
+        }
+      } else {
+        const dirs = type==="B" ? BISHOP_DIRS : type==="R" ? ROOK_DIRS : BISHOP_DIRS.concat(ROOK_DIRS);
+        for(const [dr,dc] of dirs){
+          let nr=r+dr, nc=c+dc;
+          while(inBoard(nr,nc)){
+            if(board[nr][nc]==="."){
+              moves.push({from:[r,c],to:[nr,nc],capture:false,promotion:false});
+            } else {
+              if(pieceColor(board[nr][nc])!==color) moves.push({from:[r,c],to:[nr,nc],capture:true,promotion:false});
+              break;
+            }
+            nr+=dr; nc+=dc;
+          }
+        }
+      }
+    }
+  }
+  return moves;
+}
+function makePawnMove(r,c,nr,nc,color,capture){
+  const promotion = (color==="w" && nr===0) || (color==="b" && nr===7);
+  return { from:[r,c], to:[nr,nc], capture:!!capture, promotion };
+}
+function isSquareAttacked(board, tr, tc, byColor){
+  const dir = byColor==="w" ? -1 : 1;
+  const pr = tr - dir;
+  for(const dc of [-1,1]){
+    const pc = tc+dc;
+    if(inBoard(pr,pc)){
+      const p = board[pr][pc];
+      if(p!=="." && pieceColor(p)===byColor && pieceType(p)==="P") return true;
+    }
+  }
+  for(const [dr,dc] of KNIGHT_OFFS){
+    const nr=tr+dr, nc=tc+dc;
+    if(inBoard(nr,nc)){
+      const p=board[nr][nc];
+      if(p!=="." && pieceColor(p)===byColor && pieceType(p)==="N") return true;
+    }
+  }
+  for(const [dr,dc] of KING_OFFS){
+    const nr=tr+dr, nc=tc+dc;
+    if(inBoard(nr,nc)){
+      const p=board[nr][nc];
+      if(p!=="." && pieceColor(p)===byColor && pieceType(p)==="K") return true;
+    }
+  }
+  for(const [dr,dc] of BISHOP_DIRS){
+    let nr=tr+dr, nc=tc+dc;
+    while(inBoard(nr,nc)){
+      const p=board[nr][nc];
+      if(p!=="."){ if(pieceColor(p)===byColor && (pieceType(p)==="B"||pieceType(p)==="Q")) return true; break; }
+      nr+=dr; nc+=dc;
+    }
+  }
+  for(const [dr,dc] of ROOK_DIRS){
+    let nr=tr+dr, nc=tc+dc;
+    while(inBoard(nr,nc)){
+      const p=board[nr][nc];
+      if(p!=="."){ if(pieceColor(p)===byColor && (pieceType(p)==="R"||pieceType(p)==="Q")) return true; break; }
+      nr+=dr; nc+=dc;
+    }
+  }
+  return false;
+}
+function findKing(board,color){
+  const target = color==="w" ? "K":"k";
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c]===target) return [r,c];
+  return null;
+}
+function isKingInCheck(board,color){
+  const kp = findKing(board,color);
+  if(!kp) return false;
+  return isSquareAttacked(board, kp[0], kp[1], color==="w"?"b":"w");
+}
+function applyChessMove(board, move){
+  const nb = board.map(row=>row.slice());
+  const [fr,fc]=move.from, [tr,tc]=move.to;
+  let piece = nb[fr][fc];
+  if(move.promotion) piece = pieceColor(piece)==="w" ? "Q":"q";
+  nb[tr][tc]=piece;
+  nb[fr][fc]=".";
+  return nb;
+}
+function generateLegalMoves(board,color){
+  const pseudo = generatePseudoMoves(board,color);
+  const legal = [];
+  for(const m of pseudo){
+    const nb = applyChessMove(board,m);
+    if(!isKingInCheck(nb,color)) legal.push(m);
+  }
+  return legal;
+}
+function evaluateChessBoard(board){
+  let score = 0;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const p = board[r][c];
+    if(p===".") continue;
+    const val = PIECE_VALUES[pieceType(p)];
+    const centerBonus = (r>=3 && r<=4 && c>=3 && c<=4) ? 0.15 : 0;
+    score += pieceColor(p)==="w" ? (val+centerBonus) : -(val+centerBonus);
+  }
+  return score;
+}
+function chessMinimax(board, depth, alpha, beta, maximizing){
+  const color = maximizing ? "w" : "b";
+  const moves = generateLegalMoves(board,color);
+  if(moves.length===0){
+    if(isKingInCheck(board,color)) return maximizing ? -1000 : 1000;
+    return 0;
+  }
+  if(depth===0) return evaluateChessBoard(board);
+  if(maximizing){
+    let best = -Infinity;
+    for(const m of moves){
+      const val = chessMinimax(applyChessMove(board,m), depth-1, alpha, beta, false);
+      best = Math.max(best,val);
+      alpha = Math.max(alpha,best);
+      if(beta<=alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for(const m of moves){
+      const val = chessMinimax(applyChessMove(board,m), depth-1, alpha, beta, true);
+      best = Math.min(best,val);
+      beta = Math.min(beta,best);
+      if(beta<=alpha) break;
+    }
+    return best;
+  }
+}
+function chooseLumiMove(board, difficulty){
+  const moves = generateLegalMoves(board,"b");
+  if(!moves.length) return null;
+  if(difficulty==="easy"){
+    const captures = moves.filter(m=>m.capture);
+    if(captures.length && Math.random()<0.6) return captures[Math.floor(Math.random()*captures.length)];
+    return moves[Math.floor(Math.random()*moves.length)];
+  }
+  const depth = difficulty==="medium" ? 2 : 3;
+  let bestMove=null, bestVal=Infinity;
+  shuffle(moves).forEach(m=>{
+    const val = chessMinimax(applyChessMove(board,m), depth-1, -Infinity, Infinity, true);
+    if(val < bestVal){ bestVal=val; bestMove=m; }
+  });
+  return bestMove;
+}
+
+let CHESS_MATCH = null;
+function openChessMatchPicker(){
+  const el = document.getElementById("chess-content");
+  el.innerHTML = `<h3>🐲 Lumi'ye Karşı Oyna</h3>
+    <p style="color:var(--text-soft)">Bir zorluk seviyesi seç. Sen beyaz taşlarla başlarsın.</p>
+    <div class="opt-grid">
+      <button class="opt-btn" id="diff-easy">🟢 Başlangıç</button>
+      <button class="opt-btn" id="diff-medium">🟡 Orta Seviye</button>
+      <button class="opt-btn" id="diff-hard">🔴 Zorlu</button>
+    </div>`;
+  document.getElementById("diff-easy").addEventListener("click", ()=> startChessMatch("easy"));
+  document.getElementById("diff-medium").addEventListener("click", ()=> startChessMatch("medium"));
+  document.getElementById("diff-hard").addEventListener("click", ()=> startChessMatch("hard"));
+  openModal("modal-chess");
+}
+function startChessMatch(difficulty){
+  CHESS_MATCH = { board: initialChessBoard(), turn:"w", difficulty, selected:null, legalForSelected:[], over:false };
+  renderChessMatch();
+}
+function chessMatchSquareName(r,c){ return FILES[c] + (8-r); }
+function renderChessMatch(){
+  const m = CHESS_MATCH;
+  const el = document.getElementById("chess-content");
+  const diffLabel = { easy:"🟢 Başlangıç", medium:"🟡 Orta Seviye", hard:"🔴 Zorlu" }[m.difficulty];
+  el.innerHTML = `<h3>🐲 Lumi'ye Karşı — ${diffLabel}</h3>
+    <p id="chess-match-status" style="text-align:center;min-height:20px">${m.turn==="w" ? "Senin sıran (beyaz)" : "Lumi düşünüyor..."}</p>
+    <div class="chess-board" id="chess-match-board"></div>
+    <button class="big-btn secondary" id="chess-resign" style="margin-top:10px">🏳️ Oyunu Bırak</button>`;
+  const boardEl = document.getElementById("chess-match-board");
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const sq = document.createElement("div");
+      const name = chessMatchSquareName(r,c);
+      sq.className = "sq " + ((r+c)%2===0 ? "light":"dark");
+      const ch = m.board[r][c];
+      if(ch !== ".") sq.textContent = PIECE_MAP[ch] || "";
+      if(m.selected && m.selected[0]===r && m.selected[1]===c) sq.classList.add("selected");
+      if(m.legalForSelected.some(mv=> mv.to[0]===r && mv.to[1]===c)) sq.classList.add("target-hint");
+      sq.addEventListener("click", ()=> chessMatchSquareClick(r,c));
+      boardEl.appendChild(sq);
+    }
+  }
+  document.getElementById("chess-resign").addEventListener("click", ()=>{ closeModal("modal-chess"); renderChessList(); });
+}
+function chessMatchSquareClick(r,c){
+  const m = CHESS_MATCH;
+  if(m.over || m.turn!=="w") return;
+  const piece = m.board[r][c];
+  if(!m.selected){
+    if(piece!=="." && pieceColor(piece)==="w"){
+      const allLegal = generateLegalMoves(m.board,"w");
+      m.selected = [r,c];
+      m.legalForSelected = allLegal.filter(mv=> mv.from[0]===r && mv.from[1]===c);
+      renderChessMatch();
+    }
+    return;
+  }
+  const chosen = m.legalForSelected.find(mv=> mv.to[0]===r && mv.to[1]===c);
+  if(chosen){
+    playCorrectSound();
+    m.board = applyChessMove(m.board, chosen);
+    m.selected = null; m.legalForSelected = [];
+    m.turn = "b";
+    renderChessMatch();
+    setTimeout(()=> chessMatchAfterPlayerMove(), 500);
+  } else if(piece!=="." && pieceColor(piece)==="w"){
+    // farklı bir kendi taşını seçmeye çalışıyor
+    const allLegal = generateLegalMoves(m.board,"w");
+    m.selected = [r,c];
+    m.legalForSelected = allLegal.filter(mv=> mv.from[0]===r && mv.from[1]===c);
+    renderChessMatch();
+  } else {
+    playWrongSound();
+    m.selected = null; m.legalForSelected = [];
+    renderChessMatch();
+  }
+}
+function chessMatchAfterPlayerMove(){
+  const m = CHESS_MATCH;
+  const blackLegal = generateLegalMoves(m.board,"b");
+  if(blackLegal.length===0){
+    if(isKingInCheck(m.board,"b")) return chessMatchEnd("win");
+    return chessMatchEnd("draw");
+  }
+  document.getElementById("chess-match-status") && (document.getElementById("chess-match-status").textContent = "Lumi düşünüyor...");
+  setTimeout(()=>{
+    const aiMove = chooseLumiMove(m.board, m.difficulty);
+    if(!aiMove) return chessMatchEnd("win");
+    m.board = applyChessMove(m.board, aiMove);
+    m.turn = "w";
+    const whiteLegal = generateLegalMoves(m.board,"w");
+    if(whiteLegal.length===0){
+      if(isKingInCheck(m.board,"w")) return chessMatchEnd("lose");
+      return chessMatchEnd("draw");
+    }
+    renderChessMatch();
+    if(isKingInCheck(m.board,"w")) playWrongSound();
+  }, 400);
+}
+function chessMatchEnd(result){
+  const m = CHESS_MATCH;
+  m.over = true;
+  const diffBonus = { easy:1, medium:1.6, hard:2.2 }[m.difficulty];
+  let xp=0, diamonds=0, note="";
+  if(result==="win"){
+    playApplauseSound(); playFireworksSound();
+    setTimeout(()=> speakTurkish("Tebrikler, kazandın!"), 300);
+    xp = Math.round(25*diffBonus); diamonds = Math.round(10*diffBonus);
+    note = `🎉 Lumi'yi yendin! (${ {easy:"Başlangıç",medium:"Orta Seviye",hard:"Zorlu"}[m.difficulty] })`;
+    CUR.state.lumiWins = (CUR.state.lumiWins||0) + 1;
+  } else if(result==="draw"){
+    xp = 10; diamonds = 4;
+    note = "🤝 Berabere kaldınız! İyi bir oyundu.";
+  } else {
+    xp = 6; diamonds = 2;
+    note = "Lumi bu sefer kazandı, ama harika bir denemeydi! Tekrar dene.";
+  }
+  logActivity("chess_match", m.difficulty+"_"+result);
+  closeModal("modal-chess");
+  renderChessList();
+  finishAndReward(xp, diamonds, note);
+}
+
 /* ================= GAMES ================= */
 function openGame(kind){
   openModal("modal-game");
@@ -790,6 +1148,7 @@ function openGame(kind){
   else if(kind==="pronounce") startPronounceGame();
   else if(kind==="blank") startBlankGame();
   else if(kind==="speak") startSpeakingGame();
+  else if(kind==="quiz") startQuizGame();
 }
 function randomWordPool(n){
   return shuffle(ALL_WORDS).slice(0,n);
@@ -877,17 +1236,19 @@ function startSentenceGame(){
   const sentence = SENTENCES[Math.floor(Math.random()*SENTENCES.length)];
   const scrambled = shuffle(sentence.words.map((w,i)=>({w,i})));
   let built = [];
+  let statusMsg = "";
   const usedFlags = new Array(sentence.words.length).fill(false);
   function render(){
     const el = document.getElementById("game-content");
     el.innerHTML = `<h3>🧩 Cümle Kurma</h3><p>Türkçesi: <b>${sentence.tr}</b></p>
       <div class="chip-row" id="answer-row"></div>
       <div class="chip-row" id="chip-row"></div>
+      <p id="sentence-status" style="text-align:center;min-height:20px">${statusMsg}</p>
       <button class="big-btn" id="check-sentence">Kontrol Et</button>`;
     const ansRow = document.getElementById("answer-row");
     built.forEach(item=>{
       const chip = document.createElement("div"); chip.className="chip"; chip.textContent=item.w;
-      chip.addEventListener("click", ()=>{ built = built.filter(x=>x!==item); usedFlags[item.i]=false; render(); });
+      chip.addEventListener("click", ()=>{ built = built.filter(x=>x!==item); usedFlags[item.i]=false; statusMsg=""; render(); });
       ansRow.appendChild(chip);
     });
     const chipRow = document.getElementById("chip-row");
@@ -895,7 +1256,7 @@ function startSentenceGame(){
       const chip = document.createElement("div");
       chip.className = "chip" + (usedFlags[item.i] ? " used":"");
       chip.textContent = item.w;
-      if(!usedFlags[item.i]) chip.addEventListener("click", ()=>{ built.push(item); usedFlags[item.i]=true; render(); });
+      if(!usedFlags[item.i]) chip.addEventListener("click", ()=>{ built.push(item); usedFlags[item.i]=true; statusMsg=""; render(); });
       chipRow.appendChild(chip);
     });
     document.getElementById("check-sentence").addEventListener("click", ()=>{
@@ -906,7 +1267,8 @@ function startSentenceGame(){
         gameFinish(18, 8, "Cümle Kurma oyunu tamamlandı!");
       } else {
         playWrongSound();
-        alert("Tekrar dene! Doğru sıralamayı bulmaya çalış.");
+        statusMsg = "❌ Tekrar dene! Doğru sıralamayı bulmaya çalış.";
+        render();
       }
     });
   }
@@ -1020,6 +1382,50 @@ function startBlankGame(){
       btn.addEventListener("click", ()=>{
         if(opt===item.answer){ score++; playCorrectSound(); } else { playWrongSound(); }
         ri++; setTimeout(nextRound, 600);
+      });
+      grid.appendChild(btn);
+    });
+  }
+  nextRound();
+}
+
+/* --- Karma Quiz (tamamlanan derslerden karışık tekrar sınavı) --- */
+function startQuizGame(){
+  const doneIdx = CUR.state.lessonsDone;
+  const el0 = document.getElementById("game-content");
+  if(!doneIdx.length){
+    el0.innerHTML = `<h3>🧠 Karma Quiz</h3><p style="color:var(--text-soft)">Quiz için önce en az bir ders tamamlaman gerekiyor. Ders Yolu'ndan bir ders bitirip tekrar dene!</p>
+      <button class="big-btn" onclick="closeModal('modal-game')">Tamam</button>`;
+    return;
+  }
+  const pool = doneIdx.flatMap(i=> LESSONS[i].w);
+  const rounds = shuffle(pool).slice(0, Math.min(10, pool.length));
+  let ri = 0, score = 0;
+  function nextRound(){
+    if(ri >= rounds.length){ gameFinish(12+score*2, score, `Karma Quiz: ${score}/${rounds.length} doğru.`); return; }
+    const pair = rounds[ri];
+    const dir = Math.random()<0.5 ? "entr" : "tren";
+    const correct = dir==="entr" ? pair[1] : pair[0];
+    const promptWord = dir==="entr" ? pair[0] : pair[1];
+    const distractors = shuffle(pool.filter(p=> (dir==="entr"?p[1]:p[0]) !== correct)).slice(0,3).map(p=> dir==="entr"?p[1]:p[0]);
+    const options = shuffle([correct, ...distractors]);
+    const el = document.getElementById("game-content");
+    el.innerHTML = `<h3>🧠 Karma Quiz</h3>
+      <p style="text-align:center;color:var(--text-soft)">Soru ${ri+1}/${rounds.length}</p>
+      <div class="q-word" style="cursor:pointer" id="quiz-word">${promptWord} 🔊</div>
+      <div class="opt-grid" id="quiz-opts"></div>`;
+    speakEnglish(pair[0]);
+    document.getElementById("quiz-word").addEventListener("click", ()=> speakEnglish(pair[0]));
+    const grid = document.getElementById("quiz-opts");
+    options.forEach(opt=>{
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.textContent = opt;
+      btn.addEventListener("click", ()=>{
+        document.querySelectorAll("#quiz-opts .opt-btn").forEach(b=> b.disabled = true);
+        if(opt===correct){ score++; playCorrectSound(); btn.classList.add("correct"); }
+        else { playWrongSound(); btn.classList.add("wrong"); }
+        ri++; setTimeout(nextRound, 700);
       });
       grid.appendChild(btn);
     });
