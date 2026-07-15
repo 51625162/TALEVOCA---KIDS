@@ -373,6 +373,160 @@ const STORIES = [
   }
 ];
 
+// ============================================================
+// DİYALOG HİKÂYELERİ — Duolingo'daki "Stories" bölümüne benzer format:
+// iki karakter arasında konuşma + ara sıra anlama soruları + dinleme
+// alıştırması. Mevcut STORIES (seçim yapmalı hikâyeler) hiç değişmedi,
+// bu tamamen ek bir içerik seti.
+// step types: "line" (konuşma balonu), "check" (anlama sorusu),
+// "listen" (önce dinlenir, sonra doğru seçenek işaretlenir)
+// ============================================================
+const DIALOGUE_STORIES = [
+  {
+    id: "cafe_order",
+    title: "At the Café",
+    characters: { A:"Lumi 🐲", B:"Barista ☕" },
+    gloss: { "menu":"menü", "order":"sipariş", "juice":"meyve suyu", "please":"lütfen", "here you are":"buyurun" },
+    steps: [
+      { type:"line", speaker:"A", text:"Hello! Can I see the menu, please?" },
+      { type:"line", speaker:"B", text:"Of course! Here you are." },
+      { type:"check", q:"What did Lumi ask for?", options:["The bill","The menu","A table"], answer:1 },
+      { type:"line", speaker:"A", text:"I would like an apple juice, please." },
+      { type:"line", speaker:"B", text:"Here you are! Enjoy your juice." },
+      { type:"listen", audio:"Here you are! Enjoy your juice.", q:"What did you hear?", options:["Here you are! Enjoy your juice.","Here you go! Have a nice day.","Sorry, we are closed."], answer:0 },
+    ]
+  },
+  {
+    id: "new_friend",
+    title: "Making a New Friend",
+    characters: { A:"Lumi 🐲", B:"Mia 🦋" },
+    gloss: { "name":"isim", "nice to meet you":"tanıştığımıza memnun oldum", "favorite":"favori", "too":"de/da" },
+    steps: [
+      { type:"line", speaker:"A", text:"Hi! What is your name?" },
+      { type:"line", speaker:"B", text:"My name is Mia. Nice to meet you!" },
+      { type:"check", q:"What is the girl's name?", options:["Lumi","Mia","Pufi"], answer:1 },
+      { type:"line", speaker:"A", text:"What is your favorite color?" },
+      { type:"line", speaker:"B", text:"My favorite color is blue. What about you?" },
+      { type:"line", speaker:"A", text:"My favorite color is green too!" },
+      { type:"listen", audio:"Nice to meet you!", q:"What did you hear?", options:["Nice to meet you!","See you later!","Good night!"], answer:0 },
+    ]
+  },
+  {
+    id: "zoo_visit",
+    title: "A Day at the Zoo",
+    characters: { A:"Lumi 🐲", B:"Dad 👨" },
+    gloss: { "zoo":"hayvanat bahçesi", "lion":"aslan", "roar":"kükremek", "scared":"korkmuş", "gentle":"nazik/uysal" },
+    steps: [
+      { type:"line", speaker:"A", text:"Look, Dad! A big lion!" },
+      { type:"line", speaker:"B", text:"Yes! Listen, it can roar very loudly." },
+      { type:"check", q:"What animal did they see?", options:["An elephant","A lion","A monkey"], answer:1 },
+      { type:"line", speaker:"A", text:"Is it scary?" },
+      { type:"line", speaker:"B", text:"Don't worry, it is safe behind the glass. It's actually quite gentle here." },
+      { type:"listen", audio:"It can roar very loudly.", q:"What did you hear?", options:["It can roar very loudly.","It can jump very high.","It can swim very fast."], answer:0 },
+    ]
+  },
+  {
+    id: "weather_talk",
+    title: "What's the Weather Like?",
+    characters: { A:"Lumi 🐲", B:"Mom 👩" },
+    gloss: { "weather":"hava durumu", "umbrella":"şemsiye", "cloudy":"bulutlu", "rain":"yağmur" },
+    steps: [
+      { type:"line", speaker:"A", text:"Mom, what is the weather like today?" },
+      { type:"line", speaker:"B", text:"It is cloudy, and it might rain later." },
+      { type:"check", q:"What is the weather like?", options:["Sunny","Cloudy","Snowy"], answer:1 },
+      { type:"line", speaker:"A", text:"Should I bring an umbrella?" },
+      { type:"line", speaker:"B", text:"Yes, that's a good idea!" },
+      { type:"listen", audio:"It might rain later.", q:"What did you hear?", options:["It might rain later.","It is very hot today.","It is windy outside."], answer:0 },
+    ]
+  },
+  {
+    id: "toy_store",
+    title: "At the Toy Store",
+    characters: { A:"Lumi 🐲", B:"Shopkeeper 🧸" },
+    gloss: { "toy":"oyuncak", "price":"fiyat", "expensive":"pahalı", "cheap":"ucuz", "afford":"gücü yetmek" },
+    steps: [
+      { type:"line", speaker:"A", text:"Excuse me, how much is this toy?" },
+      { type:"line", speaker:"B", text:"It is ten dollars." },
+      { type:"check", q:"How much does the toy cost?", options:["Five dollars","Ten dollars","Twenty dollars"], answer:1 },
+      { type:"line", speaker:"A", text:"That's great, it's not expensive!" },
+      { type:"line", speaker:"B", text:"Would you like to buy it?" },
+      { type:"line", speaker:"A", text:"Yes, please!" },
+      { type:"listen", audio:"How much is this toy?", q:"What did you hear?", options:["How much is this toy?","Where is the toy store?","Do you have a bigger one?"], answer:0 },
+    ]
+  },
+  {
+    id: "weekend_plan",
+    title: "Planning a Weekend",
+    characters: { A:"Lumi 🐲", B:"Mia 🦋" },
+    gloss: { "weekend":"hafta sonu", "plan":"plan", "park":"park", "movie":"film", "sounds good":"kulağa hoş geliyor" },
+    steps: [
+      { type:"line", speaker:"A", text:"What is your plan for the weekend?" },
+      { type:"line", speaker:"B", text:"I want to go to the park. Do you want to come?" },
+      { type:"check", q:"Where does Mia want to go?", options:["The park","The cinema","The zoo"], answer:0 },
+      { type:"line", speaker:"A", text:"Sounds good! Can we also watch a movie later?" },
+      { type:"line", speaker:"B", text:"Sure, that's a great idea!" },
+      { type:"listen", audio:"Do you want to come?", q:"What did you hear?", options:["Do you want to come?","Where do you live?","What time is it?"], answer:0 },
+    ]
+  },
+  {
+    id: "airport_trip",
+    title: "At the Airport",
+    characters: { A:"Lumi 🐲", B:"Flight Attendant ✈️" },
+    gloss: { "airport":"havaalanı", "ticket":"bilet", "gate":"kapı (havaalanı)", "flight":"uçuş", "boarding":"biniş" },
+    steps: [
+      { type:"line", speaker:"A", text:"Excuse me, where is gate number five?" },
+      { type:"line", speaker:"B", text:"It's straight ahead, next to the café." },
+      { type:"check", q:"Where is gate five?", options:["Next to the café","Next to the shop","Upstairs"], answer:0 },
+      { type:"line", speaker:"A", text:"Thank you! When does boarding start?" },
+      { type:"line", speaker:"B", text:"Boarding starts in twenty minutes." },
+      { type:"listen", audio:"Boarding starts in twenty minutes.", q:"What did you hear?", options:["Boarding starts in twenty minutes.","The flight is cancelled.","Please show your passport."], answer:0 },
+    ]
+  },
+  {
+    id: "directions_help",
+    title: "Asking for Directions",
+    characters: { A:"Lumi 🐲", B:"Stranger 🧑" },
+    gloss: { "library":"kütüphane", "straight":"düz", "left":"sol", "right":"sağ", "corner":"köşe" },
+    steps: [
+      { type:"line", speaker:"A", text:"Excuse me, how do I get to the library?" },
+      { type:"line", speaker:"B", text:"Go straight, then turn left at the corner." },
+      { type:"check", q:"Where should you turn left?", options:["At the corner","At the school","At the park"], answer:0 },
+      { type:"line", speaker:"A", text:"Thank you so much!" },
+      { type:"line", speaker:"B", text:"You're welcome. Have a nice day!" },
+      { type:"listen", audio:"Turn left at the corner.", q:"What did you hear?", options:["Turn left at the corner.","Turn right at the light.","Go back the way you came."], answer:0 },
+    ]
+  },
+  {
+    id: "museum_trip",
+    title: "A Trip to the Museum",
+    characters: { A:"Lumi 🐲", B:"Guide 🧑‍🏫" },
+    gloss: { "museum":"müze", "painting":"tablo", "history":"tarih", "quiet":"sessiz", "amazing":"harika" },
+    steps: [
+      { type:"line", speaker:"A", text:"Wow, this painting is amazing!" },
+      { type:"line", speaker:"B", text:"Yes, it is very old. It shows an important moment in history." },
+      { type:"check", q:"What does the painting show?", options:["A moment in history","A modern city","A cartoon"], answer:0 },
+      { type:"line", speaker:"A", text:"Should we be quiet here?" },
+      { type:"line", speaker:"B", text:"Yes, please. Other visitors are looking too." },
+      { type:"listen", audio:"This painting is amazing!", q:"What did you hear?", options:["This painting is amazing!","This museum is closed.","Let's go home now."], answer:0 },
+    ]
+  },
+  {
+    id: "family_dinner",
+    title: "Family Dinner",
+    characters: { A:"Lumi 🐲", B:"Grandmother 👵" },
+    gloss: { "dinner":"akşam yemeği", "delicious":"lezzetli", "table":"masa", "help":"yardım etmek" },
+    steps: [
+      { type:"line", speaker:"B", text:"Dinner is ready! Can you help me set the table?" },
+      { type:"line", speaker:"A", text:"Of course, Grandma! What are we eating?" },
+      { type:"check", q:"What did Lumi offer to do?", options:["Set the table","Wash the dishes","Cook the dinner"], answer:0 },
+      { type:"line", speaker:"B", text:"We are having soup and bread. It smells delicious!" },
+      { type:"line", speaker:"A", text:"I can't wait to try it!" },
+      { type:"listen", audio:"It smells delicious!", q:"What did you hear?", options:["It smells delicious!","It looks very cold.","It tastes too salty."], answer:0 },
+    ]
+  },
+];
+
+
 // Basit satranç bulmacaları — tam kurallı motor yerine, her bulmacanın
 // doğru "başlangıç" ve "hedef" karesi tanımlıdır.
 const CHESS_PUZZLES = [
@@ -462,7 +616,8 @@ const BADGES = [
   { id:"hundred_lessons", name:"Dil Kahramanı", desc:"100 ders tamamladın!", cond:(s)=>s.lessonsDone.length>=100 },
   { id:"all_lessons", name:"Dil Ustası", desc:"Tüm dersleri tamamladın!", cond:(s)=>s.lessonsDone.length>=LESSONS.length },
   { id:"first_story", name:"Hikâye Kâşifi", desc:"İlk hikâyeni okudun!", cond:(s)=>s.storiesDone.length>=1 },
-  { id:"all_stories", name:"Usta Anlatıcı", desc:"Tüm hikâyeleri tamamladın!", cond:(s)=>s.storiesDone.length>=STORIES.length },
+  { id:"all_stories", name:"Usta Anlatıcı", desc:"Tüm hikâyeleri tamamladın!", cond:(s)=>s.storiesDone.length>=(STORIES.length+DIALOGUE_STORIES.length) },
+  { id:"dialogue_master", name:"Diyalog Ustası", desc:"Tüm diyalog hikâyelerini tamamladın!", cond:(s)=>DIALOGUE_STORIES.every(ds=>s.storiesDone.includes(ds.id)) },
   { id:"first_chess", name:"Satranç Çırağı", desc:"İlk satranç bulmacanı çözdün!", cond:(s)=>s.chessDone.length>=1 },
   { id:"chess_master", name:"Satranç Ustası", desc:"Tüm satranç bulmacalarını çözdün!", cond:(s)=>s.chessDone.length>=CHESS_PUZZLES.length },
   { id:"hundred_diamonds", name:"Elmas Avcısı", desc:"100 elmasa ulaştın!", cond:(s)=>s.diamonds>=100 },

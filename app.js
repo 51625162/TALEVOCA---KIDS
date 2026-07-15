@@ -87,17 +87,100 @@ function playChestSound(){
 }
 
 /* --------------- SESLENDİRME (TTS) --------------- */
-function speakText(text, lang){
+// Cihazda yüklü olan sesleri toplar. Tarayıcı/cihaza göre İngilizce ses
+// sayısı değişebilir — bazı cihazlarda tek ses, bazılarında çok sayıda olur.
+let AVAILABLE_VOICES = [];
+let VOICES_READY = false;
+function loadVoices(){
+  try{
+    const all = speechSynthesis.getVoices();
+    if(all && all.length){
+      AVAILABLE_VOICES = all.filter(v=> v.lang && v.lang.toLowerCase().startsWith("en"));
+      if(!AVAILABLE_VOICES.length) AVAILABLE_VOICES = all;
+      VOICES_READY = true;
+    }
+  }catch(e){ /* speechSynthesis yok */ }
+}
+try{
+  loadVoices();
+  if(typeof speechSynthesis !== "undefined") speechSynthesis.onvoiceschanged = loadVoices;
+}catch(e){ /* yok say */ }
+
+function getPreferredVoice(){
+  if(!AVAILABLE_VOICES.length) return null;
+  const pref = CUR.state && CUR.state.voicePref;
+  if(pref){
+    const found = AVAILABLE_VOICES.find(v=> v.name===pref);
+    if(found) return found;
+  }
+  return AVAILABLE_VOICES[0];
+}
+// speakerKey: dialoglarda karakterleri birbirinden ayırmak için ("A" veya "B").
+// Farklı sesler varsa farklı ses, yoksa perde (pitch) farkıyla ayırt edilir.
+function speakText(text, lang, speakerKey){
   try{
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang || "en-US";
     u.rate = lang === "tr-TR" ? 0.95 : 0.85;
+    u.pitch = 1;
+    if(lang !== "tr-TR"){
+      let voice = getPreferredVoice();
+      if(speakerKey && AVAILABLE_VOICES.length > 1){
+        // Karakter A ve B için mümkünse farklı iki ses seç.
+        const idx = speakerKey === "B" ? 1 % AVAILABLE_VOICES.length : 0;
+        voice = AVAILABLE_VOICES[idx];
+      } else if(speakerKey === "B"){
+        u.pitch = 0.8; u.rate = 0.8; // tek ses varsa kalın/yavaş perde ile ayırt et
+      } else if(speakerKey === "A"){
+        u.pitch = 1.15; u.rate = 0.88;
+      }
+      if(voice) u.voice = voice;
+    }
     speechSynthesis.speak(u);
   }catch(e){ /* speechSynthesis desteklenmiyorsa sessizce geç */ }
 }
-function speakEnglish(text){ speakText(text, "en-US"); }
+function speakEnglish(text, speakerKey){ speakText(text, "en-US", speakerKey); }
 function speakTurkish(text){ speakText(text, "tr-TR"); }
+
+/* --------------- SES AYARLARI PANELİ --------------- */
+function openVoiceSettings(){
+  loadVoices();
+  const el = document.getElementById("voice-settings-content");
+  if(!AVAILABLE_VOICES.length){
+    el.innerHTML = `<h3>🔊 Ses Ayarları</h3><p style="color:var(--text-soft)">Cihazında birden fazla İngilizce ses bulunamadı. Yine de karakterler arasında perde farkıyla ayrım yapılır.</p>`;
+    openModal("modal-voice-settings");
+    return;
+  }
+  const currentPref = (CUR.state && CUR.state.voicePref) || (AVAILABLE_VOICES[0] && AVAILABLE_VOICES[0].name);
+  el.innerHTML = `<h3>🔊 Ses Ayarları</h3>
+    <p style="color:var(--text-soft);font-size:13px">Derslerde ve hikâyelerde kullanılacak sesi seç. Cihazına yüklü seslere göre liste değişebilir.</p>
+    <div id="voice-list"></div>`;
+  const list = document.getElementById("voice-list");
+  AVAILABLE_VOICES.forEach((v, idx)=>{
+    const row = document.createElement("div");
+    row.className = "voice-row" + (v.name===currentPref ? " selected" : "");
+    row.innerHTML = `<span>🎙️ Ses ${idx+1} <span style="color:var(--text-soft);font-size:11px">(${v.name})</span></span>`;
+    const btnTest = document.createElement("button");
+    btnTest.className = "big-btn secondary";
+    btnTest.style.cssText = "width:auto;padding:8px 14px;margin:0 6px";
+    btnTest.textContent = "▶️ Dene";
+    btnTest.addEventListener("click", (e)=>{ e.stopPropagation(); const u = new SpeechSynthesisUtterance("Hello! This is my voice."); u.voice = v; u.lang="en-US"; speechSynthesis.cancel(); speechSynthesis.speak(u); });
+    const btnSelect = document.createElement("button");
+    btnSelect.className = "big-btn";
+    btnSelect.style.cssText = "width:auto;padding:8px 14px";
+    btnSelect.textContent = v.name===currentPref ? "✓ Seçili" : "Seç";
+    btnSelect.addEventListener("click", ()=>{
+      CUR.state.voicePref = v.name;
+      saveState();
+      openVoiceSettings();
+    });
+    row.appendChild(btnTest);
+    row.appendChild(btnSelect);
+    list.appendChild(row);
+  });
+  openModal("modal-voice-settings");
+}
 
 /* ---------------- STORAGE ---------------- */
 function defaultState(){
@@ -111,6 +194,7 @@ function defaultState(){
     costume:0, frame:0, pet:null,
     openedChests:[],
     chestInventory:[],
+    voicePref:null,
     badgesUnlocked:[]
   };
 }
@@ -160,6 +244,7 @@ function init(){
     b.addEventListener("click", ()=> openGame(b.dataset.game));
   });
   document.getElementById("btn-chess-howto").addEventListener("click", openChessHowTo);
+  document.getElementById("btn-voice-settings").addEventListener("click", openVoiceSettings);
 
   // Not: Güvenlik/gizlilik için oturum otomatik açılmaz — her girişte şifre istenir.
   // Bu sayede TALHA ve ZEYNEP birbirinin ilerlemesini göremez.
@@ -398,6 +483,14 @@ function renderStories(){
     card.addEventListener("click", ()=> openStory(story.id));
     wrap.appendChild(card);
   });
+  DIALOGUE_STORIES.forEach(story=>{
+    const done = CUR.state.storiesDone.includes(story.id);
+    const card = document.createElement("div");
+    card.className = "story-card";
+    card.innerHTML = `<div class="s-icon">💬</div><div>${story.title}</div><div style="font-size:11px;color:var(--text-soft)">Diyalog Hikâyesi</div>${done?'<div class="card-done-tag">Tamamlandı</div>':''}`;
+    card.addEventListener("click", ()=> openDialogueStory(story.id));
+    wrap.appendChild(card);
+  });
 }
 let STORY_RUN = null;
 function openStory(id){
@@ -505,6 +598,104 @@ function finishStory(correctQuiz){
   playFireworksSound();
   setTimeout(()=> speakTurkish("Tebrikler!"), 300);
   finishAndReward(xp, diamonds, `"${story.title}" hikâyesi tamamlandı!`);
+}
+
+/* ================= DİYALOG HİKÂYELERİ (Duolingo tarzı) ================= */
+let DLG_RUN = null;
+function openDialogueStory(id){
+  const story = DIALOGUE_STORIES.find(s=>s.id===id);
+  DLG_RUN = { story, i:0, correctChecks:0, totalChecks:0 };
+  renderDialogueStep();
+  openModal("modal-story");
+}
+function renderDialogueStep(){
+  const { story, i } = DLG_RUN;
+  const el = document.getElementById("story-content");
+  if(i >= story.steps.length){ finishDialogueStory(); return; }
+  const step = story.steps[i];
+
+  if(step.type === "line"){
+    const name = story.characters[step.speaker] || step.speaker;
+    const textHtml = renderGlossText(step.text, story.gloss);
+    el.innerHTML = `<h3>${story.title}</h3>
+      <div class="howto-card">
+        <div class="symbol">${name.split(" ").pop()}</div>
+        <div><b>${name}</b><br><span id="dlg-text">${textHtml}</span></div>
+      </div>
+      <button class="big-btn secondary" id="dlg-narrate">🔊 Dinle</button>
+      <button class="big-btn" id="dlg-next">Devam Et</button>`;
+    attachGlossHandlers(el);
+    document.getElementById("dlg-narrate").addEventListener("click", ()=> speakEnglish(step.text, step.speaker));
+    speakEnglish(step.text, step.speaker);
+    document.getElementById("dlg-next").addEventListener("click", ()=>{ DLG_RUN.i++; renderDialogueStep(); });
+    return;
+  }
+
+  if(step.type === "check"){
+    el.innerHTML = `<h3>${story.title}</h3>
+      <div class="q-word" style="font-size:18px">${step.q}</div>
+      <div class="opt-grid" id="dlg-opt"></div>`;
+    const grid = document.getElementById("dlg-opt");
+    step.options.forEach((opt,oi)=>{
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.textContent = opt;
+      btn.addEventListener("click", ()=>{
+        document.querySelectorAll("#dlg-opt .opt-btn").forEach((b,bi)=>{
+          b.disabled = true;
+          if(bi===step.answer) b.classList.add("correct");
+          else if(bi===oi) b.classList.add("wrong");
+        });
+        DLG_RUN.totalChecks++;
+        const correct = oi===step.answer;
+        if(correct){ DLG_RUN.correctChecks++; playCorrectSound(); } else { playWrongSound(); }
+        setTimeout(()=>{ DLG_RUN.i++; renderDialogueStep(); }, 800);
+      });
+      grid.appendChild(btn);
+    });
+    return;
+  }
+
+  if(step.type === "listen"){
+    el.innerHTML = `<h3>${story.title}</h3>
+      <p style="text-align:center;color:var(--text-soft)">Önce dinle, sonra ne duyduğunu seç.</p>
+      <button class="big-btn secondary" id="dlg-listen-btn">🔊 Dinle</button>
+      <div class="opt-grid" id="dlg-opt" style="margin-top:14px"></div>`;
+    document.getElementById("dlg-listen-btn").addEventListener("click", ()=> speakEnglish(step.audio));
+    speakEnglish(step.audio);
+    const grid = document.getElementById("dlg-opt");
+    step.options.forEach((opt,oi)=>{
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.textContent = opt;
+      btn.addEventListener("click", ()=>{
+        document.querySelectorAll("#dlg-opt .opt-btn").forEach((b,bi)=>{
+          b.disabled = true;
+          if(bi===step.answer) b.classList.add("correct");
+          else if(bi===oi) b.classList.add("wrong");
+        });
+        DLG_RUN.totalChecks++;
+        const correct = oi===step.answer;
+        if(correct){ DLG_RUN.correctChecks++; playCorrectSound(); } else { playWrongSound(); }
+        setTimeout(()=>{ DLG_RUN.i++; renderDialogueStep(); }, 800);
+      });
+      grid.appendChild(btn);
+    });
+    return;
+  }
+}
+function finishDialogueStory(){
+  const { story, correctChecks, totalChecks } = DLG_RUN;
+  const firstTry = !CUR.state.storiesDone.includes(story.id);
+  if(firstTry) CUR.state.storiesDone.push(story.id);
+  logActivity("dialogue_story", story.id);
+  closeModal("modal-story");
+  renderStories();
+  const xp = 18 + correctChecks*4;
+  const diamonds = 6 + correctChecks*2;
+  playFireworksSound();
+  setTimeout(()=> speakTurkish("Tebrikler!"), 300);
+  finishAndReward(xp, diamonds, `"${story.title}" diyalog hikâyesi tamamlandı! (${correctChecks}/${totalChecks} doğru)`);
 }
 
 /* ================= CHESS ================= */
@@ -848,7 +1039,7 @@ function startSpeakingGame(){
     const target = rounds[ri];
     const el = document.getElementById("game-content");
     el.innerHTML = `<h3>🗣️ Konuşma Pratiği</h3>
-      <p>Önce kelimeyi dinle, sonra mikrofona basıp tekrarla.</p>
+      <p>Önce kelimeyi dinle, sonra mikrofona basıp aynı şekilde söylemeye çalış.</p>
       <div class="q-word">${target[0]} <span style="font-size:14px;color:var(--text-soft)">(${target[1]})</span></div>
       <button class="big-btn secondary" id="speak-listen">🔊 Tekrar Dinle</button>
       <button class="mic-btn" id="mic-btn" title="Mikrofona bas ve tekrar et">🎤</button>
@@ -870,31 +1061,36 @@ function startSpeakingGame(){
       rec.lang = "en-US";
       rec.maxAlternatives = 3;
       micBtn.classList.add("listening");
+      micBtn.disabled = true;
       statusEl.textContent = "Dinleniyor... şimdi söyle!";
       rec.start();
       rec.onresult = (event)=>{
         micBtn.classList.remove("listening");
+        micBtn.disabled = false;
         const said = event.results[0][0].transcript.toLowerCase().trim();
         const expected = target[0].toLowerCase().trim();
         const isMatch = said === expected || said.includes(expected) || expected.includes(said);
         if(isMatch){
+          // Doğru telaffuz: bravo + alkış sesi, sonraki kelimeye geçilir.
           score++;
           playCorrectSound();
+          playApplauseSound();
           statusEl.textContent = "✅ Bravo, doğru!";
           speakTurkish("Bravo, doğru!");
+          setTimeout(()=>{ ri++; nextRound(); }, 1800);
         } else {
+          // Yanlış telaffuz: doğru söyleyene kadar aynı kelime tekrar edilir, ilerlemez.
           playWrongSound();
           statusEl.textContent = `❌ Yanlış, tekrar et. (Duyulan: "${said}")`;
           speakTurkish("Yanlış, tekrar et.");
         }
-        setTimeout(()=>{ ri++; nextRound(); }, 1600);
       };
       rec.onerror = ()=>{
         micBtn.classList.remove("listening");
-        statusEl.textContent = "Mikrofon algılanamadı. Bir sonraki kelimeye geçiliyor.";
-        setTimeout(()=>{ ri++; nextRound(); }, 1400);
+        micBtn.disabled = false;
+        statusEl.textContent = "Mikrofon algılanamadı, tekrar dene.";
       };
-      rec.onend = ()=> micBtn.classList.remove("listening");
+      rec.onend = ()=>{ micBtn.classList.remove("listening"); micBtn.disabled = false; };
     }catch(e){
       statusEl.textContent = "Mikrofon kullanılamıyor.";
     }
