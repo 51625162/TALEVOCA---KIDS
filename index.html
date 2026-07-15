@@ -57,6 +57,7 @@
 
   <nav id="tab-bar">
     <button class="tab-btn active" data-tab="home">🏠<span>Ana Sayfa</span></button>
+    <button class="tab-btn" data-tab="alphabet">🔤<span>Alfabe</span></button>
     <button class="tab-btn" data-tab="stories">📖<span>Hikâyeler</span></button>
     <button class="tab-btn" data-tab="chess">♟️<span>Satranç</span></button>
     <button class="tab-btn" data-tab="games">🎮<span>Oyunlar</span></button>
@@ -69,6 +70,14 @@
     <section id="tab-home" class="tab-view active">
       <h2>Ders Yolu</h2>
       <div id="lesson-path" class="lesson-path"></div>
+    </section>
+
+    <!-- ALPHABET & PHONICS -->
+    <section id="tab-alphabet" class="tab-view">
+      <h2>Alfabe ve Fonik Sesler</h2>
+      <p style="color:var(--text-soft);font-size:13px;margin-top:-8px">Bir harfe dokun, sesini ve örnek kelimeyi dinle!</p>
+      <button id="btn-phonics-game" class="big-btn" style="margin-bottom:14px">🎧 Fonik Sesler Oyunu</button>
+      <div id="alphabet-grid" class="card-grid"></div>
     </section>
 
     <!-- STORIES -->

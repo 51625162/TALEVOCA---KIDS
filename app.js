@@ -216,6 +216,7 @@ function defaultState(){
     chestInventory:[],
     voicePref:null,
     lumiWins:0,
+    alphabetDone:false,
     badgesUnlocked:[]
   };
 }
@@ -267,6 +268,7 @@ function init(){
   document.getElementById("btn-chess-howto").addEventListener("click", openChessHowTo);
   document.getElementById("btn-chess-vs-lumi").addEventListener("click", openChessMatchPicker);
   document.getElementById("btn-voice-settings").addEventListener("click", openVoiceSettings);
+  document.getElementById("btn-phonics-game").addEventListener("click", startPhonicsGame);
 
   // Not: Güvenlik/gizlilik için oturum otomatik açılmaz — her girişte şifre istenir.
   // Bu sayede TALHA ve ZEYNEP birbirinin ilerlemesini göremez.
@@ -327,6 +329,7 @@ function switchTab(tab){
 function renderAll(){
   renderHeader();
   renderHome();
+  renderAlphabet();
   renderStories();
   renderChessList();
   renderRewards();
@@ -396,6 +399,59 @@ function renderHome(){
     if(unlocked || done) node.addEventListener("click", ()=> openLesson(idx));
     wrap.appendChild(node);
   });
+}
+
+/* ================= ALFABE VE FONİK SESLER ================= */
+function renderAlphabet(){
+  const wrap = document.getElementById("alphabet-grid");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+  ALPHABET.forEach(item=>{
+    const card = document.createElement("div");
+    card.className = "story-card";
+    card.innerHTML = `<div class="s-icon">${item.emoji}</div><div style="font-size:22px;font-weight:800;color:var(--gold)">${item.letter}</div><div style="font-size:12px;color:var(--text-soft)">${item.word} (${item.tr})</div>`;
+    card.addEventListener("click", ()=>{
+      speakEnglish(item.letter + ". " + item.word);
+    });
+    wrap.appendChild(card);
+  });
+}
+function startPhonicsGame(){
+  openModal("modal-game");
+  const rounds = shuffle(ALPHABET).slice(0, 10);
+  let ri = 0, score = 0;
+  function nextRound(){
+    if(ri >= rounds.length){
+      CUR.state.alphabetDone = true;
+      gameFinish(15+score*2, score, `Fonik Sesler Oyunu: ${score}/${rounds.length} doğru.`);
+      return;
+    }
+    const correct = rounds[ri];
+    const distractors = shuffle(ALPHABET.filter(a=>a.letter!==correct.letter)).slice(0,3);
+    const options = shuffle([correct, ...distractors]);
+    const el = document.getElementById("game-content");
+    el.innerHTML = `<h3>🎧 Fonik Sesler Oyunu</h3>
+      <p style="text-align:center;color:var(--text-soft)">Sesi dinle, doğru harfi seç.</p>
+      <button class="big-btn secondary" id="phonics-listen">🔊 Tekrar Dinle</button>
+      <div class="opt-grid" id="phonics-opts" style="margin-top:14px"></div>`;
+    const sayLetter = ()=> speakEnglish(correct.letter + correct.letter);
+    document.getElementById("phonics-listen").addEventListener("click", sayLetter);
+    sayLetter();
+    const grid = document.getElementById("phonics-opts");
+    options.forEach(opt=>{
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.textContent = `${opt.letter}  ${opt.emoji}`;
+      btn.addEventListener("click", ()=>{
+        document.querySelectorAll("#phonics-opts .opt-btn").forEach(b=> b.disabled = true);
+        if(opt.letter===correct.letter){ score++; playCorrectSound(); btn.classList.add("correct"); }
+        else{ playWrongSound(); btn.classList.add("wrong"); }
+        ri++; setTimeout(nextRound, 700);
+      });
+      grid.appendChild(btn);
+    });
+  }
+  nextRound();
 }
 
 function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }

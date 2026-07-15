@@ -622,11 +622,45 @@ const BADGES = [
   { id:"chess_master", name:"Satranç Ustası", desc:"Tüm satranç bulmacalarını çözdün!", cond:(s)=>s.chessDone.length>=CHESS_PUZZLES.length },
   { id:"beat_lumi", name:"Lumi'yi Yendin!", desc:"Lumi'ye karşı ilk maçını kazandın!", cond:(s)=>(s.lumiWins||0)>=1 },
   { id:"beat_lumi_5", name:"Satranç Şampiyonu", desc:"Lumi'ye karşı 5 maç kazandın!", cond:(s)=>(s.lumiWins||0)>=5 },
+  { id:"alphabet_master", name:"Alfabe Kâşifi", desc:"Fonik Sesler oyununu tamamladın!", cond:(s)=>!!s.alphabetDone },
   { id:"hundred_diamonds", name:"Elmas Avcısı", desc:"100 elmasa ulaştın!", cond:(s)=>s.diamonds>=100 },
   { id:"level5", name:"Yükselen Yıldız", desc:"Seviye 5'e ulaştın!", cond:(s)=>levelFromXP(s.xp)>=5 },
   { id:"level10", name:"Parlayan Yıldız", desc:"Seviye 10'a ulaştın!", cond:(s)=>levelFromXP(s.xp)>=10 },
   { id:"gamer", name:"Oyun Sever", desc:"5 oyun tamamladın!", cond:(s)=>s.gamesDone>=5 },
   { id:"chest_collector", name:"Sandık Avcısı", desc:"5 sandık açtın!", cond:(s)=>(s.chestInventory||[]).filter(c=>c.opened).length>=5 },
+];
+
+// ============================================================
+// ALFABE VE FONİK SESLER — mevcut derslerden tamamen bağımsız,
+// 2. sınıf temel düzey için harf tanıma ve ses eşleştirme içeriği.
+// ============================================================
+const ALPHABET = [
+  { letter:"A", phonetic:"ey", word:"Apple", tr:"elma", emoji:"🍎" },
+  { letter:"B", phonetic:"bi", word:"Ball", tr:"top", emoji:"⚽" },
+  { letter:"C", phonetic:"si", word:"Cat", tr:"kedi", emoji:"🐱" },
+  { letter:"D", phonetic:"di", word:"Dog", tr:"köpek", emoji:"🐶" },
+  { letter:"E", phonetic:"i", word:"Egg", tr:"yumurta", emoji:"🥚" },
+  { letter:"F", phonetic:"ef", word:"Fish", tr:"balık", emoji:"🐟" },
+  { letter:"G", phonetic:"ci", word:"Grapes", tr:"üzüm", emoji:"🍇" },
+  { letter:"H", phonetic:"eyç", word:"Hat", tr:"şapka", emoji:"🎩" },
+  { letter:"I", phonetic:"ay", word:"Ice Cream", tr:"dondurma", emoji:"🍦" },
+  { letter:"J", phonetic:"cey", word:"Juice", tr:"meyve suyu", emoji:"🧃" },
+  { letter:"K", phonetic:"key", word:"Kite", tr:"uçurtma", emoji:"🪁" },
+  { letter:"L", phonetic:"el", word:"Lion", tr:"aslan", emoji:"🦁" },
+  { letter:"M", phonetic:"em", word:"Moon", tr:"ay (gökyüzü)", emoji:"🌙" },
+  { letter:"N", phonetic:"en", word:"Nest", tr:"yuva", emoji:"🪺" },
+  { letter:"O", phonetic:"o", word:"Orange", tr:"portakal", emoji:"🍊" },
+  { letter:"P", phonetic:"pi", word:"Pencil", tr:"kalem", emoji:"✏️" },
+  { letter:"Q", phonetic:"kyu", word:"Queen", tr:"kraliçe", emoji:"👸" },
+  { letter:"R", phonetic:"ar", word:"Rainbow", tr:"gökkuşağı", emoji:"🌈" },
+  { letter:"S", phonetic:"es", word:"Sun", tr:"güneş", emoji:"☀️" },
+  { letter:"T", phonetic:"ti", word:"Tiger", tr:"kaplan", emoji:"🐯" },
+  { letter:"U", phonetic:"yu", word:"Umbrella", tr:"şemsiye", emoji:"☂️" },
+  { letter:"V", phonetic:"vi", word:"Violin", tr:"keman", emoji:"🎻" },
+  { letter:"W", phonetic:"dabılyu", word:"Watch", tr:"kol saati", emoji:"⌚" },
+  { letter:"X", phonetic:"eks", word:"X-ray", tr:"röntgen", emoji:"🩻" },
+  { letter:"Y", phonetic:"vay", word:"Yo-yo", tr:"yoyo", emoji:"🪀" },
+  { letter:"Z", phonetic:"zi", word:"Zebra", tr:"zebra", emoji:"🦓" },
 ];
 
 const LUMI_COSTUMES = ["Klasik Lumi","Uzaylı Lumi","Şövalye Lumi","Ressam Lumi","Kaşif Lumi"];
