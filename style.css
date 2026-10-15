@@ -293,3 +293,33 @@ h1,h2,h3{ font-family: var(--font-display); margin:0 0 .4em 0; }
   .lesson-node .ln-title{ display:none; }
   .match-cols{ gap:10px; }
 }
+
+
+/* ---------- TALEVOCA KIDS / CINEMATIC LOGIN REDESIGN ---------- */
+#screen-login{
+  isolation:isolate;position:relative;overflow:hidden;
+  background:radial-gradient(ellipse at 76% 18%,rgba(89,117,255,.42),transparent 34%),radial-gradient(ellipse at 14% 78%,rgba(25,220,205,.18),transparent 36%),linear-gradient(135deg,#071329 0%,#111d42 48%,#24184b 100%);
+}
+#screen-login::before,#screen-login::after{content:"";position:absolute;z-index:-1;pointer-events:none;border-radius:50%}
+#screen-login::before{width:min(70vw,620px);aspect-ratio:1;top:-26%;right:-8%;background:radial-gradient(circle at 35% 30%,#9bdfff 0%,#5274d9 20%,#292d79 49%,rgba(20,27,66,.05) 70%);box-shadow:0 0 90px rgba(95,138,255,.3);opacity:.85}
+#screen-login::after{width:500px;height:180px;bottom:-115px;left:50%;transform:translateX(-50%);background:#24d7ce;filter:blur(80px);opacity:.22}
+#screen-login .login-card{position:relative;width:min(100%,520px);padding:clamp(26px,5vw,46px) clamp(20px,5vw,42px) 30px;overflow:hidden;background:linear-gradient(145deg,rgba(22,37,77,.82),rgba(12,20,48,.78));border:1px solid rgba(194,226,255,.28);border-radius:34px;box-shadow:0 30px 90px rgba(0,0,0,.45),inset 0 1px rgba(255,255,255,.12),0 0 45px rgba(91,133,255,.12);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);animation:loginArrive .7s cubic-bezier(.2,.8,.2,1) both}
+#screen-login .login-card::before{content:"✦     ·       ✧         ·      ✦";display:block;color:rgba(211,232,255,.7);font-size:13px;letter-spacing:12px;margin-bottom:16px;animation:starTwinkle 4s ease-in-out infinite}
+#screen-login .lumi-badge{display:grid;place-items:center;width:100px;height:100px;margin:0 auto 14px;border-radius:32px;font-size:58px;background:linear-gradient(145deg,rgba(103,239,222,.22),rgba(103,125,255,.22));border:1px solid rgba(190,255,246,.32);box-shadow:0 0 35px rgba(71,233,214,.18),inset 0 1px rgba(255,255,255,.25);animation:lumiFloat 4s ease-in-out infinite}
+#screen-login .login-card h1{font-size:clamp(29px,6vw,43px);line-height:1.05;letter-spacing:1.2px;color:#f8fbff;text-shadow:0 3px 25px rgba(104,167,255,.25)}
+#screen-login .login-card h1 span{color:#7af0dc;text-shadow:0 0 24px rgba(122,240,220,.22)}
+#screen-login .tagline{color:#d0dcf8;font-size:14px;letter-spacing:.2px;margin:12px 0 28px}
+#screen-login .user-pick{gap:14px;margin-bottom:22px}
+#screen-login .user-btn{flex:1;min-width:0;min-height:138px;padding:18px 12px;color:#f5fbff;border-radius:24px;border:1px solid rgba(205,226,255,.25);background:linear-gradient(155deg,rgba(90,133,213,.3),rgba(37,55,111,.58));box-shadow:inset 0 1px rgba(255,255,255,.16),0 14px 26px rgba(0,0,0,.18);transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+#screen-login .user-btn:hover,#screen-login .user-btn:focus-visible{transform:translateY(-6px);border-color:rgba(122,240,220,.75);box-shadow:0 16px 32px rgba(23,213,197,.14),inset 0 1px rgba(255,255,255,.22);outline:none}
+#screen-login .user-btn .avatar{display:grid;place-items:center;width:76px;height:76px;font-size:48px;border-radius:23px;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.04));box-shadow:inset 0 1px rgba(255,255,255,.2)}
+#screen-login .user-btn span:last-child{font-size:13px;letter-spacing:1.5px}
+#screen-login #btn-parent-login{width:100%;padding:13px 16px;border-color:rgba(195,215,255,.22);color:#d9e4ff;background:rgba(255,255,255,.045);transition:all .2s ease}
+#screen-login #btn-parent-login:hover{background:rgba(255,255,255,.09);border-color:rgba(122,240,220,.5)}
+#screen-login .password-input{background:rgba(5,13,33,.7);border-color:rgba(195,215,255,.2)}
+#screen-login .big-btn{background:linear-gradient(100deg,#70f0d6,#62b7ff);color:#09203b;box-shadow:0 10px 24px rgba(65,205,222,.2)}
+@keyframes lumiFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}
+@keyframes starTwinkle{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes loginArrive{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:480px){#screen-login{padding:16px;min-height:100svh}#screen-login .login-card{border-radius:28px;padding:26px 18px 22px}#screen-login .user-btn{min-height:122px}#screen-login .user-btn .avatar{width:66px;height:66px;font-size:42px}}
+@media(prefers-reduced-motion:reduce){#screen-login .login-card,#screen-login .lumi-badge,#screen-login .login-card::before{animation:none}#screen-login .user-btn{transition:none}}
