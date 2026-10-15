@@ -72,27 +72,39 @@ function playNoiseBurst(duration, startDelay, gainVal){
   src.start(t0);
 }
 function playCorrectSound(){
-  playTone(523.25, 0.12, "sine", 0, 0.22);
-  playTone(783.99, 0.18, "sine", 0.1, 0.22);
+  // Kısa, yumuşak ve tiz bir başarı jingle'ı.
+  playTone(659.25, 0.16, "sine", 0, 0.13);
+  playTone(783.99, 0.18, "sine", 0.11, 0.14);
+  playTone(987.77, 0.25, "sine", 0.23, 0.12);
 }
 function playWrongSound(){
-  playTone(220, 0.25, "sawtooth", 0, 0.15);
-  playTone(180, 0.3, "sawtooth", 0.1, 0.12);
+  // Sert alarm yerine kısa, düşük ve rahatsız etmeyen uyarı.
+  playTone(293.66, 0.16, "triangle", 0, 0.10);
+  playTone(246.94, 0.2, "triangle", 0.12, 0.09);
 }
 function playApplauseSound(){
-  for(let i=0;i<8;i++) playNoiseBurst(0.15, i*0.09, 0.12);
+  // Yoğunluğu değişen çoklu kısa gürültü darbeleri, tekdüze tıkırtıyı azaltır.
+  for(let i=0;i<15;i++){
+    const delay = i * 0.075;
+    const level = 0.035 + Math.random() * 0.045;
+    playNoiseBurst(0.11 + Math.random()*0.08, delay, level);
+  }
 }
 function playFireworksSound(){
-  playNoiseBurst(0.4, 0, 0.2);
-  playTone(880, 0.3, "square", 0.05, 0.12);
-  playNoiseBurst(0.35, 0.5, 0.18);
-  playTone(1046, 0.3, "square", 0.55, 0.12);
-  playNoiseBurst(0.3, 1.0, 0.16);
+  // Alçalan bir uğultu ve yumuşak, dağınık parıltı sesleri.
+  playNoiseBurst(0.55, 0, 0.13);
+  playTone(220, 0.45, "sawtooth", 0, 0.045);
+  playTone(880, 0.18, "sine", 0.42, 0.06);
+  playNoiseBurst(0.42, 0.55, 0.12);
+  playTone(1046.5, 0.22, "sine", 0.72, 0.055);
+  playNoiseBurst(0.38, 1.0, 0.10);
 }
 function playChestSound(){
-  playTone(392, 0.15, "triangle", 0, 0.15);
-  playTone(523.25, 0.2, "triangle", 0.15, 0.18);
-  playTone(659.25, 0.3, "triangle", 0.32, 0.2);
+  // Sandık için yumuşak metalik yükseliş.
+  playTone(392, 0.18, "sine", 0, 0.075);
+  playTone(523.25, 0.22, "sine", 0.14, 0.08);
+  playTone(659.25, 0.28, "sine", 0.31, 0.09);
+  playTone(783.99, 0.35, "sine", 0.49, 0.07);
 }
 
 /* --------------- SESLENDİRME (TTS) --------------- */
@@ -106,15 +118,34 @@ let VOICES_READY = false;
 const BROKEN_VOICE_NAMES = ["zarvox","bahh","bad news","bells","boing","bubbles","cellos","wobble","trinoids","albert","deranged","hysterical","pipe organ","junior","kathy","ralph","fred","whisper","good news"];
 function loadVoices(){
   try{
+    if(typeof speechSynthesis === "undefined") return;
     const all = speechSynthesis.getVoices();
-    if(all && all.length){
-      let en = all.filter(v=> v.lang && v.lang.toLowerCase().startsWith("en"));
-      if(!en.length) en = all;
-      en = en.filter(v=> !BROKEN_VOICE_NAMES.some(bad=> v.name.toLowerCase().includes(bad)));
-      if(!en.length) en = all.filter(v=> v.lang && v.lang.toLowerCase().startsWith("en"));
-      AVAILABLE_VOICES = en.slice(0, 5);
-      VOICES_READY = true;
-    }
+    if(!all || !all.length) return;
+
+    // Önce doğal duyulan, İngilizceye uygun yerleşik sesleri seç.
+    // Chrome/Android'de Google US/UK English genellikle daha anlaşılırdır.
+    const english = all.filter(v => /^en(-|$)/i.test(v.lang || ""));
+    const usable = english.filter(v =>
+      !BROKEN_VOICE_NAMES.some(bad => (v.name || "").toLowerCase().includes(bad))
+    );
+    const rankVoice = v => {
+      const name = (v.name || "").toLowerCase();
+      const lang = (v.lang || "").toLowerCase();
+      let score = 0;
+      if (/google us english|google uk english/.test(name)) score += 100;
+      if (/microsoft.*(aria|jenny|guy|sara|ryan)/.test(name)) score += 90;
+      if (/natural|neural|online/.test(name)) score += 80;
+      if (/enhanced|premium/.test(name)) score += 60;
+      if (/en-us/.test(lang)) score += 30;
+      if (/en-gb/.test(lang)) score += 20;
+      if (v.localService === false) score += 10;
+      if (/compact|default/.test(name)) score -= 10;
+      return score;
+    };
+    const source = usable.length ? usable : english;
+    source.sort((a,b) => rankVoice(b) - rankVoice(a));
+    AVAILABLE_VOICES = source.slice(0, 5);
+    VOICES_READY = AVAILABLE_VOICES.length > 0;
   }catch(e){ /* speechSynthesis yok */ }
 }
 try{
@@ -135,23 +166,33 @@ function getPreferredVoice(){
 // Farklı sesler varsa farklı ses, yoksa perde (pitch) farkıyla ayırt edilir.
 function speakText(text, lang, speakerKey){
   try{
+    if(typeof speechSynthesis === "undefined" || typeof SpeechSynthesisUtterance === "undefined") return;
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(String(text));
     u.lang = lang || "en-US";
-    u.rate = lang === "tr-TR" ? 0.95 : 0.85;
+    // Daha doğal ritim: İngilizceyi gereksiz yavaşlatma, Türkçeyi akıcı tut.
+    u.rate = lang === "tr-TR" ? 0.98 : 0.92;
     u.pitch = 1;
-    if(lang !== "tr-TR"){
+    u.volume = 1;
+    if(lang === "tr-TR"){
+      const voices = speechSynthesis.getVoices();
+      const trVoice = voices.find(v => /^tr(-|$)/i.test(v.lang || "") &&
+        /google|natural|neural|enhanced/i.test(v.name || "")) ||
+        voices.find(v => /^tr(-|$)/i.test(v.lang || ""));
+      if(trVoice) u.voice = trVoice;
+    } else {
+      loadVoices();
       let voice = getPreferredVoice();
       if(speakerKey && AVAILABLE_VOICES.length > 1){
-        // Karakter A ve B için mümkünse farklı iki ses seç.
-        const idx = speakerKey === "B" ? 1 % AVAILABLE_VOICES.length : 0;
-        voice = AVAILABLE_VOICES[idx];
+        const first = getPreferredVoice();
+        const second = AVAILABLE_VOICES.find(v => v.name !== first?.name) || first;
+        voice = speakerKey === "B" ? second : first;
       } else if(speakerKey === "B"){
-        u.pitch = 0.8; u.rate = 0.8; // tek ses varsa kalın/yavaş perde ile ayırt et
+        u.pitch = 0.92; u.rate = 0.9;
       } else if(speakerKey === "A"){
-        u.pitch = 1.15; u.rate = 0.88;
+        u.pitch = 1.04;
       }
-      if(voice) u.voice = voice;
+      if(voice) { u.voice = voice; u.lang = voice.lang || "en-US"; }
     }
     speechSynthesis.speak(u);
   }catch(e){ /* speechSynthesis desteklenmiyorsa sessizce geç */ }
