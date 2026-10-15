@@ -396,3 +396,16 @@ body:has(#app-shell:not(.hidden)){
  .story-card,.chess-card,.game-card,.badge-card,.costume-card,.frame-card,.pet-card{padding:15px 10px;border-radius:18px}
 }
 @media(prefers-reduced-motion:reduce){.lesson-node,.story-card,.chess-card,.game-card,.big-btn{transition:none}}
+
+
+/* FINAL HIGH-CONTRAST THEME OVERRIDE — ensure the new learning world is unmistakable */
+body:has(#app-shell:not(.hidden)){background:#08142f!important;background-image:radial-gradient(ellipse at 15% 0%,rgba(56,116,202,.25),transparent 35%),linear-gradient(180deg,#08142f,#111b3c 58%,#17183b)!important;background-attachment:fixed!important}
+#app-header{background:rgba(7,17,42,.96)!important;border-bottom:1px solid rgba(132,220,255,.24)!important}
+#tab-bar{background:rgba(12,24,55,.96)!important}
+#tab-home{background:linear-gradient(135deg,rgba(25,44,88,.96),rgba(17,26,61,.98))!important;border:1px solid rgba(160,213,255,.22)!important;border-radius:28px!important;box-shadow:0 22px 55px rgba(0,0,0,.28)!important}
+#tab-home .lesson-path .lesson-node{width:88px!important;height:88px!important;border-radius:28px!important;border:2px solid rgba(196,230,255,.3)!important;background:linear-gradient(145deg,#273b70,#17244b)!important;color:#f2f7ff!important;box-shadow:0 12px 25px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.14)!important}
+#tab-home .lesson-path .lesson-node.done{background:linear-gradient(145deg,#75eed5,#24a995)!important;color:#073a3c!important;border-color:#b3fff0!important}
+#tab-home .lesson-path .lesson-node.current{background:linear-gradient(145deg,#ffe79a,#ffb34e)!important;color:#553008!important;border-color:#fff0be!important;box-shadow:0 0 0 7px rgba(255,197,87,.14),0 0 35px rgba(255,190,75,.25)!important}
+#tab-home .lesson-path .lesson-node .ln-title{color:#e1eaff!important;font-weight:700!important}
+.story-card,.chess-card,.game-card,.badge-card,.costume-card,.frame-card,.pet-card{background:linear-gradient(145deg,rgba(37,55,103,.96),rgba(19,30,67,.98))!important;border:1px solid rgba(174,214,255,.2)!important;border-radius:22px!important;box-shadow:0 12px 26px rgba(0,0,0,.2)!important}
+@media(max-width:600px){#tab-home .lesson-path .lesson-node{width:76px!important;height:76px!important;border-radius:24px!important}}
