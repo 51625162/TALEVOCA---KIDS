@@ -323,3 +323,8 @@ h1,h2,h3{ font-family: var(--font-display); margin:0 0 .4em 0; }
 @keyframes loginArrive{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:480px){#screen-login{padding:16px;min-height:100svh}#screen-login .login-card{border-radius:28px;padding:26px 18px 22px}#screen-login .user-btn{min-height:122px}#screen-login .user-btn .avatar{width:66px;height:66px;font-size:42px}}
 @media(prefers-reduced-motion:reduce){#screen-login .login-card,#screen-login .lumi-badge,#screen-login .login-card::before{animation:none}#screen-login .user-btn{transition:none}}
+
+/* Fantasy artwork layer for the redesigned login */
+#screen-login{background-image:linear-gradient(90deg,rgba(4,12,32,.78),rgba(7,15,42,.43)),url("images/talevoca-kids-world.svg"),radial-gradient(ellipse at 76% 18%,rgba(89,117,255,.42),transparent 34%),linear-gradient(135deg,#071329,#24184b);background-size:cover,cover,auto,cover;background-position:center,center,center,center;background-attachment:fixed}
+#screen-login .login-card{background:linear-gradient(145deg,rgba(12,24,55,.79),rgba(12,20,48,.76));}
+@media(max-width:600px){#screen-login{background-attachment:scroll;background-position:center,center,center,center}}
