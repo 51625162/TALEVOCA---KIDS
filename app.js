@@ -270,8 +270,10 @@ function init(){
   document.getElementById("btn-voice-settings").addEventListener("click", openVoiceSettings);
   document.getElementById("btn-phonics-game").addEventListener("click", startPhonicsGame);
 
-  // Not: Güvenlik/gizlilik için oturum otomatik açılmaz — her girişte şifre istenir.
-  // Bu sayede TALHA ve ZEYNEP birbirinin ilerlemesini göremez.
+  // Oturum yenilemede korunur; yalnızca kullanıcı Çıkış yaptığında silinir.
+  // Kayıtlı kullanıcı adı, ayrı çocuk verilerini değiştirmez.
+  const savedUser = localStorage.getItem("talevoca_current_user");
+  if (USERS.includes(savedUser)) login(savedUser);
 }
 
 function showPasswordStep(user){
